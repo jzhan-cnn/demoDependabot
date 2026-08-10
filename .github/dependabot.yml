@@ -3,8 +3,7 @@ updates:
   # Verify Gradle dependencies
   - package-ecosystem: "gradle"
     directories:
-      - "/android/main"
-      - "/android"
+      - "/"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
@@ -12,16 +11,13 @@ updates:
       - dependency-name: "com.wbd.*:*"
       - dependency-name: "com.turner.*:*"
       - dependency-name: "com.mapbox.*:*"
-    reviewers:
-      - "turnercode/cnn-android"
     groups:
-      production-version-updates:
+      minor-version-updates:
         dependency-type: "production"
         applies-to: version-updates
         patterns:
           - "*"
         update-types:
-          - "major"
           - "minor"
           - "patch"
       production-security-updates:
@@ -40,5 +36,3 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 2
-    reviewers:
-      - "turnercode/cnn-android"

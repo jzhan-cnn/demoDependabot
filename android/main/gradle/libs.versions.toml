@@ -95,7 +95,7 @@ splashscreen = "1.2.0"
 
 # Plugin Versions
 
-detekt = "2.0.0-alpha.5"
+detekt = "2.0.0-alpha.6"
 devtoolsKsp = "2.3.7"
 kotlinter = "5.6.0"
 kotlinPlugin = "2.4.10"

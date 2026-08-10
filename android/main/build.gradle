@@ -1,0 +1,435 @@
+plugins {
+    alias(libs.plugins.kotlin.plugin.compose)
+    alias(libs.plugins.google.devtools.ksp)
+    alias(libs.plugins.baselineprofile)
+    alias(libs.plugins.gradle.test.retry)
+    id("com.android.application")
+    id("dagger.hilt.android.plugin")
+    id("kotlin-parcelize")
+    id("org.jmailen.kotlinter")
+    id("jacoco")
+    id("org.jetbrains.kotlin.plugin.serialization")
+    id("com.google.gms.google-services")
+    id("com.google.firebase.crashlytics")
+}
+
+/**
+ * Add Firebase Performance plugin to Release builds
+ * https://firebase.google.com/docs/perf-mon/get-started-android#add-perfmon-plugin
+ */
+if (getGradle().getStartParameter().getTaskRequests().toString().contains("Release")) {
+    apply plugin: 'com.google.firebase.firebase-perf'
+    logger.warn("Added Firebase Performance plugin for release build")
+}
+
+android {
+    namespace = "com.cnn.mobile.android.phone"
+    packagingOptions {
+        jniLibs {
+            pickFirsts += ['**/libc++_shared.so', '**/libjsc.so']
+        }
+    }
+
+
+    configurations.all {
+        resolutionStrategy.force "com.google.code.gson:gson:2.10"
+        resolutionStrategy.force "androidx.annotation:annotation:1.8.1"
+        resolutionStrategy.force 'com.comscore:android-analytics:6.12.1'
+        resolutionStrategy {
+            exclude group: "org.jetbrains.kotlinx", module: "kotlinx-coroutines-debug"
+            exclude group: "org.jetbrains.kotlin", module: "kotlin-android-extensions-runtime"
+        }
+    }
+
+    compileSdkVersion rootProject.ext.compileSdkVersion
+
+    defaultConfig {
+        applicationId "com.cnn.mobile.android.phone"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode = rootProject.ext.appVersionCode()
+        versionName = rootProject.ext.appVersionName
+        ndkVersion = rootProject.ext.ndkVersion
+
+        multiDexEnabled = true
+        multiDexKeepFile = file('multidex-config.txt')
+        testApplicationId "com.cnn.mobile.android.phone.uitest"
+        resourceConfigurations += ['en']
+
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        debug {
+            storeFile file('../codesign/cnn.keystore')
+            storePassword 'Turn3r!'
+            keyAlias 'development'
+            keyPassword 'T1t4n!'
+        }
+        prodAndroid {
+            storeFile file('../codesign/cnn.keystore')
+            storePassword 'Turn3r!'
+            keyAlias 'development'
+            keyPassword 'T1t4n!'
+        }
+    }
+
+    buildTypes {
+        configureEach {
+            firebaseCrashlytics {
+                mappingFileUploadEnabled = false
+            }
+            resValue "bool", "reactAskForOverlayPermission", "false"
+        }
+        debug {
+            minifyEnabled System.properties['minifyenabled'] == null ? true : System.properties['minifyenabled'].toBoolean()
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro',
+                    'proguard-rules-debug.pro'
+            testProguardFile 'proguard-rules-test.pro'
+            signingConfig = signingConfigs.debug
+            resValue "bool", "loggingEnabled", "true"
+
+        }
+        release {
+            shrinkResources = true
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            multiDexEnabled = true
+            signingConfig = signingConfigs.debug
+            resValue "bool", "loggingEnabled", "false"
+        }
+    }
+
+    flavorDimensions "product"
+
+    productFlavors {
+        //allows logging, charles access, and debug menu access
+        standard {
+            dimension 'product'
+            resValue "string", "stellarHostName", "https://mobile-int.content-hub.cnn-cms.net"
+            resValue "string", "fallbackHostName", "https://www.cnn.com"
+            resValue "string", "adMobAppId", "ca-app-pub-7080596664555345~6496444118"
+            resValue "string", "chartBeatId", "54876"
+            resValue "string", "chartBeatUrl", "stage.next.cnn.com"
+            resValue "string", "chartBeatInternationalUrl", "edition.stage.next.cnn.com"
+        }
+
+        // No ability to hit debug menu or enable logging, no Charles access
+        stripped {
+            dimension 'product'
+            resValue "string", "stellarHostName", "https://www.cnn.com"
+            resValue "string", "fallbackHostName", "https://www.cnn.com"
+            resValue "string", "adMobAppId", "ca-app-pub-7080596664555345~6496444118"
+            resValue "string", "chartBeatId", "37612"
+            resValue "string", "chartBeatUrl", "app.cnn"
+            resValue "string", "chartBeatInternationalUrl", "app.edition.cnn"
+        }
+    }
+
+    testOptions {
+        unitTests.returnDefaultValues = true
+    }
+
+    testOptions {
+        unitTests.all {
+            jvmArgs(
+                    '--add-opens=java.base/java.lang=ALL-UNNAMED',
+                    '--add-opens=java.base/java.util=ALL-UNNAMED',
+                    '--add-opens=java.base/java.io=ALL-UNNAMED',
+                    '--add-opens=java.base/java.net=ALL-UNNAMED',
+                    '--add-opens=java.base/java.security=ALL-UNNAMED',
+                    '--add-opens=java.base/java.text=ALL-UNNAMED',
+                    '--add-opens=java.base/jdk.internal.access=ALL-UNNAMED',
+                    '--add-opens=java.desktop/java.awt.font=ALL-UNNAMED',
+                    '--add-opens=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED',
+            )
+            jacoco {
+                includeNoLocationClasses = true
+                jacoco.excludes = ['jdk.internal.*']
+            }
+            retry {
+                maxRetries = 5
+                filter {
+                    includeAnnotationClasses.add("*Flaky")
+                }
+            }
+        }
+    }
+
+    buildFeatures {
+        compose = true
+        buildConfig = true
+        resValues = true
+    }
+
+    composeOptions {
+        kotlinCompilerExtensionVersion = '1.5.0'
+    }
+
+    compileOptions {
+        coreLibraryDesugaringEnabled = true
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
+    }
+}
+
+kotlin {
+    jvmToolchain(21)
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21
+        freeCompilerArgs.addAll(
+                "-opt-in=kotlin.RequiresOptIn",
+        )
+    }
+}
+
+kotlinter {
+    ignoreFormatFailures = false
+    ignoreLintFailures = false
+}
+
+def withoutOkHttp = { exclude module: 'okhttp' }
+dependencies {
+
+    implementation libs.webkit
+
+    // needed for top player
+    implementation libs.android.retrofuture
+
+    implementation fileTree(include: ['*.jar', '*.aar'], dir: 'libs')
+    implementation libs.legacy.support.v4
+    implementation libs.core.ktx
+    implementation libs.appcompat // Be careful when bumping to 1.7.0: fails when running :cnn:minifyStandardProductionReleaseWithR8
+    implementation libs.recyclerview
+    implementation libs.cardview
+    implementation libs.material
+    implementation libs.material.icons.extended
+    implementation libs.browser
+    implementation libs.constraintlayout
+    implementation libs.constraintlayout.compose
+    implementation libs.play.services.ads
+    implementation libs.play.services.gcm
+    // Jetpack Compose dependencies go here
+    implementation enforcedPlatform(libs.compose.bom)
+    implementation libs.ui
+    implementation libs.ui.tooling
+    implementation libs.androidx.material
+    implementation libs.androidx.material3
+    implementation libs.androidx.runtime
+    implementation libs.androidx.runtime.livedata
+    implementation libs.androidx.foundation
+    implementation libs.androidx.activity.compose
+    implementation libs.androidx.splashscreen
+    implementation libs.kotlinx.collections.immutable.jvm
+
+    implementation libs.androidx.window
+
+    implementation libs.androidx.navigation.compose
+    implementation libs.androidx.fragment.compose
+
+    implementation(libs.glide) {
+        exclude group: "com.android.support"
+    }
+    implementation libs.lottie.compose
+    implementation libs.gson
+    implementation project(':cnn:customandroidx')
+    implementation libs.timber
+    implementation libs.android.analytics
+
+    debugImplementation libs.leakcanary.android.no.op
+    releaseImplementation libs.leakcanary.android.no.op
+    implementation libs.okhttp
+    implementation libs.logging.interceptor
+    implementation libs.okhttp.urlconnection
+
+    implementation libs.rxjava
+    implementation libs.rxandroid
+    implementation libs.rxjava.debug
+    implementation libs.jsr250.api
+    implementation libs.viewpump
+
+    /* Ads */
+    implementation(libs.okhttp3.integration) {
+        exclude group: "com.android.support"
+    }
+    implementation libs.android.sdk
+    implementation project(path: ':CNNPrivacy')
+    implementation project(path: ':tune_in')
+    implementation project(path: ':notifications')
+
+    implementation libs.urbanairship.automation
+
+    // Hilt
+    implementation libs.hilt.android
+    ksp libs.hilt.android.compiler
+    ksp libs.hilt.compiler
+    implementation libs.androidx.hilt.lifecycle.viewmodel.compose
+    implementation libs.androidx.hilt.work
+    ksp libs.androidx.hilt.compiler
+
+    implementation libs.androidx.work.runtime
+
+    implementation libs.androidx.media3.exoplayer
+    implementation libs.androidx.media3.ui
+    implementation libs.androidx.media3.session
+
+    // TOP2
+    implementation(libs.player.block) {
+        exclude group: 'com.google.android.gms', module: 'play-services-ads'
+    }
+    implementation libs.auth.picker
+    implementation libs.freeview.block
+    implementation libs.std.lib.block
+    implementation libs.bouquet
+
+    lintChecks(libs.compose.lint.checks)
+
+    testImplementation libs.leakcanary.android.no.op
+    androidTestImplementation libs.junit
+    androidTestImplementation libs.androidx.annotation
+    testImplementation libs.junit
+    testImplementation libs.assertk.jvm
+    testImplementation libs.androidx.annotation
+    androidTestImplementation libs.runner
+    androidTestImplementation libs.rules
+    androidTestImplementation libs.androidx.espresso.core
+    testImplementation libs.mockk
+
+    testImplementation libs.mockito.core
+    testImplementation(libs.mockito.kotlin) {
+        exclude module: "org.jetbrains.kotlin"
+    }
+
+    // Kotlin coroutines
+    implementation libs.kotlinx.coroutines.core
+    implementation libs.kotlinx.coroutines.rx2
+    testImplementation libs.kotlinx.coroutines.test
+    androidTestImplementation libs.kotlinx.coroutines.test
+
+    androidTestImplementation libs.androidx.junit.ktx
+    ksp libs.glide.compiler
+    testImplementation(libs.androidx.core.ktx)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.kotlin.test.junit)
+    androidTestImplementation(libs.androidx.core.ktx)
+    androidTestImplementation(libs.robolectric)
+    androidTestImplementation(libs.kotlin.test.junit)
+
+    /* Adobe Analytics */
+    implementation libs.adobe.core
+    implementation libs.adobe.identity
+    implementation libs.adobe.lifecycle
+    implementation libs.adobe.signal
+    implementation libs.analytics
+    implementation libs.userprofile
+
+    implementation libs.androidx.fragment.ktx
+    implementation libs.androidx.preference.ktx
+
+    //Moshi Data Deserialization
+    implementation libs.moshi
+    ksp libs.moshi.kotlin.codegen
+
+    //kotlinx.serialization
+    implementation libs.kotlinx.serialization.json
+    implementation libs.retrofit2.kotlinx.serialization.converter
+
+    //Retrofit
+    implementation libs.retrofit
+    implementation libs.converter.moshi
+    implementation libs.retrofit2.converter.scalars, withoutOkHttp  //OneTrust Requirement
+    implementation libs.retrofit2.converter.gson, withoutOkHttp
+    implementation libs.adapter.rxjava
+
+    // Lifecycle dependencies
+    implementation libs.androidx.lifecycle.livedata.ktx
+    implementation libs.androidx.lifecycle.viewmodel.ktx
+    implementation libs.androidx.lifecycle.runtime.compose
+    implementation libs.androidx.lifecycle.viewmodel.compose
+    implementation libs.androidx.lifecycle.extensions
+
+    //Jetpack Compose 3rd party tools
+    implementation libs.landscapist.glide
+    implementation libs.accompanist.swiperefresh
+
+    //Instant Task Executor for Android Jetpack components
+    testImplementation libs.androidx.core.testing
+    //Accounts and Zion Migration Dependencies
+    implementation libs.androidx.security.crypto
+    api(libs.snowplow.android.tracker) {
+        artifact {
+            type = "aar"
+        }
+    }
+    implementation(project(":network"))
+    // Optimizely
+    implementation(libs.optimizely.android.sdk)
+
+    // remove when $jetpack_compose is bumped up to 1.3.0
+    implementation libs.snapper
+
+    // Credentials Manager
+    implementation libs.androidx.credentials.play.services.auth
+    implementation libs.credentials
+    implementation libs.googleid
+
+    // Arkose
+    implementation libs.androidx.biometric
+    implementation project(':arkose-sdk-2.4.1')
+
+    implementation libs.glob
+
+    // Firebase
+    implementation platform(libs.firebase.bom)
+    implementation(libs.firebase.crashlytics)
+    implementation(libs.firebase.analytics)
+    implementation(libs.firebase.config)
+    implementation(libs.firebase.perf)
+
+    implementation libs.android.ndk27
+    // If you're using compose also add the compose extension
+    implementation libs.maps.compose.ndk27
+
+    // DataStore
+    implementation(libs.androidx.datastore.preferences)
+
+    // AppsFlyer
+    implementation libs.af.android.sdk
+    implementation libs.installreferrer
+
+    // Google Play Billing Library
+    implementation(libs.billing.ktx)
+
+    testImplementation(libs.turbine)
+
+    // Bolt Network Client
+    implementation(libs.beam.network.client.main)
+    implementation libs.ktor.client.core
+    implementation libs.ktor.client.okhttp
+
+    // PSDK
+    // Player SDK Release 2026-Jul-07: https://github.com/wbd-streaming/wbd-beam-kotlin/releases/tag/playersdk_v2026-Jul-07
+    implementation(libs.player.common)
+    implementation(libs.player.core)
+    implementation(libs.player.ui.common)
+    implementation(libs.player.ui.core)
+    implementation(libs.bolt.playbackinfo.resolver)
+    implementation(libs.player.controls.overlay)
+    implementation(libs.player.error.overlay)
+    implementation(libs.trackselection.overlay)
+    implementation(libs.player.activity.indicator.overlay)
+    implementation(libs.vertical.player.controls.overlay)
+    implementation(libs.preview.thumbnail.overlay)
+    implementation(libs.mux)
+    implementation(libs.media.melon)
+    implementation(libs.progress.reporter)
+    implementation(libs.adtech.sdk
+    ) {
+        exclude group: 'com.discovery.android.plugins', module: 'comscore-sdk'
+    }
+    coreLibraryDesugaring libs.desugar.jdk.libs
+}
+
+check.dependsOn("clean", "lint", "test", "assemble")
+

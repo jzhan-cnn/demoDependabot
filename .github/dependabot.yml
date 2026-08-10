@@ -3,7 +3,7 @@ updates:
   # Verify Gradle dependencies
   - package-ecosystem: "gradle"
     directories:
-      - "/android/cnn"
+      - "/android/main"
       - "/android"
     schedule:
       interval: "weekly"

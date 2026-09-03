@@ -23,8 +23,6 @@ updates:
       minor-version-updates:
         dependency-type: "production"
         applies-to: version-updates
-        patterns:
-          - "*"
         update-types:
           - "minor"
           - "patch"

@@ -9,7 +9,6 @@ updates:
   # Verify Gradle dependencies
   - package-ecosystem: "gradle"
     directories:
-      - "/android/main"
       - "/android"
     registries:
       - maven-google

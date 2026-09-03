@@ -7,7 +7,7 @@ updates:
       - "/android"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 15
+    open-pull-requests-limit: 20
     ignore:
       - dependency-name: "com.wbd.*:*"
       - dependency-name: "com.turner.*:*"

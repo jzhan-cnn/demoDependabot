@@ -32,9 +32,9 @@ android {
 
 
     configurations.all {
-        resolutionStrategy.force "com.google.code.gson:gson:2.10"
+        resolutionStrategy.force "com.google.code.gson:gson:2.14.0"
         resolutionStrategy.force "androidx.annotation:annotation:1.8.1"
-        resolutionStrategy.force 'com.comscore:android-analytics:6.12.1'
+        resolutionStrategy.force 'com.comscore:android-analytics:6.15.0'
         resolutionStrategy {
             exclude group: "org.jetbrains.kotlinx", module: "kotlinx-coroutines-debug"
             exclude group: "org.jetbrains.kotlin", module: "kotlin-android-extensions-runtime"

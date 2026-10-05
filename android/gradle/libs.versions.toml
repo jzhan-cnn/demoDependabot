@@ -2,7 +2,7 @@
 
 # Library Versions
 
-accompanistSwiperefresh = "0.20.0"
+accompanistSwiperefresh = "0.36.0"
 activityCompose = "1.7.2"
 adtechSdk = "5.25.2"
 afAndroidSdk = "6.17.0"

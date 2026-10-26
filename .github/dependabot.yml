@@ -20,8 +20,8 @@ updates:
       - dependency-name: "com.turner.*:*"
       - dependency-name: "com.mapbox.*:*"
     groups:
-      major-version-updates:
-        dependency-type: "minor-patches"
+      minor-patch-version-updates:
+        dependency-type: "production"
         applies-to: version-updates
         update-types:
           - "minor"

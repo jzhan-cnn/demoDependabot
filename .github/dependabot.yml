@@ -21,10 +21,11 @@ updates:
       - dependency-name: "com.mapbox.*:*"
     groups:
       major-version-updates:
-        dependency-type: "production"
+        dependency-type: "minor-patches"
         applies-to: version-updates
         update-types:
-          - "major"
+          - "minor"
+          - "patch"
       production-security-updates:
         dependency-type: "production"
         applies-to: security-updates
